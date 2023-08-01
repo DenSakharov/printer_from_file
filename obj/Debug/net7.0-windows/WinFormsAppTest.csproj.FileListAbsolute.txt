@@ -1,0 +1,17 @@
+C:\projects\msvs22\desktop\WinFormsAppTest\bin\Debug\net7.0-windows\WinFormsAppTest.exe
+C:\projects\msvs22\desktop\WinFormsAppTest\bin\Debug\net7.0-windows\WinFormsAppTest.deps.json
+C:\projects\msvs22\desktop\WinFormsAppTest\bin\Debug\net7.0-windows\WinFormsAppTest.runtimeconfig.json
+C:\projects\msvs22\desktop\WinFormsAppTest\bin\Debug\net7.0-windows\WinFormsAppTest.dll
+C:\projects\msvs22\desktop\WinFormsAppTest\bin\Debug\net7.0-windows\WinFormsAppTest.pdb
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.csproj.AssemblyReference.cache
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.Form1.resources
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.csproj.GenerateResource.cache
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.GeneratedMSBuildEditorConfig.editorconfig
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.AssemblyInfoInputs.cache
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.AssemblyInfo.cs
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.csproj.CoreCompileInputs.cache
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.dll
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\refint\WinFormsAppTest.dll
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.pdb
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\WinFormsAppTest.genruntimeconfig.cache
+C:\projects\msvs22\desktop\WinFormsAppTest\obj\Debug\net7.0-windows\ref\WinFormsAppTest.dll
