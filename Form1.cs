@@ -1,3 +1,4 @@
+using System.Drawing;
 using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -28,6 +29,7 @@ namespace WinFormsAppTest
                 MatchCollection matches = regex.Matches(input);
                 //находим первое совпадение правила IndexTab
                 indexTab = matches[0].Value;
+                get_laser_config(input);
             }
             catch (Exception ex)
             {
@@ -54,7 +56,37 @@ namespace WinFormsAppTest
 
             return i;
         }
+        string m702contur = "";
+        string m704contur = "";
+        string m702infill = "";
+        string m704infill = "";
+        void get_laser_config(string inputString)
+        {
+            string[] blocks = Regex.Split(inputString, @"\n(?=contour|infill|support)");
 
+            // Обрабатываем каждый блок для извлечения значений M702 и M704
+            //foreach (string block in blocks)
+            //{
+            for (int i=1;i<3;i++) { 
+                string pattern = @"M702\s+(\d+(\.\d+)?)\s+M704\s+(\d+(\.\d+)?)";
+                Match match = Regex.Match(blocks[i], pattern);
+
+                if (match.Success && match.Groups.Count >= 5)
+                {
+                    if (i==1) {
+                        m702contur = match.Groups[1].Value;
+                        m704contur = match.Groups[3].Value;
+                    }
+                    else
+                    {
+                        m702infill = match.Groups[1].Value;
+                        m704infill = match.Groups[3].Value;
+                    }
+                }
+            }
+            label3.Text = "M702 : " + m702contur;
+            label4.Text = "M704 : " + m704contur;
+        } 
         private void button1_Click(object sender, EventArgs e)
         {
             using (var openFileDialog = new OpenFileDialog())
@@ -87,9 +119,6 @@ namespace WinFormsAppTest
                             listBox1.Items.Add(number);
                         }
                         text_into = fileContent;
-                        //MessageBox.Show("test");
-                        // Отобразить содержимое файла в MessageBox
-                        //MessageBox.Show("Содержимое файла:\n" + fileContent, "Содержимое файла", MessageBoxButtons.OK, MessageBoxIcon.Information);
                     }
                     catch (Exception ex)
                     {
@@ -146,82 +175,69 @@ namespace WinFormsAppTest
                     //MessageBox.Show($" Значение: {value}");
                 }
                 var content = ReadContentBetweenLines(loadedFilePath, value1, value2);
-                var points = GetStringBetween(content, "M3", "contour");
-
+                var pointsBody = GetStringBetween(content, "M3", "contour");
+                var pointsContur = GetStringBetween(content, "contour\r\nM3", "\r\nM5");
                 //Point[] pointsArray = points.Select(c => new Point(c.X, c.Y)).ToArray();
 
-                lst = points;
+                lstBody = pointsBody;
+                lstContur = pointsContur;
+                // Перезапускаем отрисовку с начала
+                timer = new System.Windows.Forms.Timer();
+                timer.Interval = 5; // Задержка между отрисовкой (в миллисекундах)
+                timer.Tick += Timer_Tick;
+                currentIndex = 0;
+                timer.Start();
                 pictureBox1.Invalidate();
-                // DrawingForm dr = new DrawingForm(points);
-                //dr.ShowDialog();
-
-                //CoordinateGridForm cf = new CoordinateGridForm(pointsArray);
-                //cf.ShowDialog();
             }
         }
-        List<Coordinate> lst = new List<Coordinate>();
-        void DrawFigure1(List<Coordinate> coordinates)
-        {
-            PictureBox pictureBox = new PictureBox();
-            pictureBox.Size = new Size(40, 40); // Размеры PictureBox
-            pictureBox.Location = new Point(300, 10); // Расположение PictureBox на форме
-            this.Controls.Add(pictureBox);
 
-            // Настройки рисования на PictureBox
-            pictureBox.Paint += (sender, e) =>
-            {
-                Graphics g = e.Graphics;
-                Pen pen = new Pen(Color.Black, 2);
-
-                // Преобразование в координаты PictureBox
-                float scaleFactor = 100.0f; // Масштабный коэффициент для увеличения размеров
-                float offsetX = 400.0f; // Смещение по X
-                float offsetY = 300.0f; // Смещение по Y
-
-                // Рисование линий между точками
-                for (int i = 0; i < coordinates.Count - 1; i++)
-                {
-                    float x1 = (float)(coordinates[i].X * scaleFactor + offsetX);
-                    float y1 = (float)(-coordinates[i].Y * scaleFactor + offsetY);
-                    float x2 = (float)(coordinates[i + 1].X * scaleFactor + offsetX);
-                    float y2 = (float)(-coordinates[i + 1].Y * scaleFactor + offsetY);
-
-                    g.DrawLine(pen, x1, y1, x2, y2);
-                }
-            };
-        }
-
+        private int currentIndex;
+        private System.Windows.Forms.Timer timer;
+        private float scale = 30f; // Масштаб
+        private float pointSize = 2f; // Размер точки
+        List<Coordinate> lstBody = new List<Coordinate>();
+        List<Coordinate> lstContur = new List<Coordinate>();
         static List<Coordinate> GetStringBetween(string input, string startString, string endString)
         {
             int startIndex = input.IndexOf(startString);
-            if (startIndex == -1)
-                return null;
+            int endIndex = input.IndexOf(endString, startIndex + startString.Length);
 
             startIndex += startString.Length;
+            int length = endIndex - startIndex;
 
-            int endIndex = input.IndexOf(endString, startIndex);
-            if (endIndex == -1)
-                return null;
-
-            string result = input.Substring(startIndex, endIndex - startIndex);
+            string result = input.Substring(startIndex, length);
             var res = ExtractCoordinates(result);
             return res;
         }
         static List<Coordinate> ExtractCoordinates(string input)
         {
             List<Coordinate> coordinates = new List<Coordinate>();
+            string pattern = @"[XY]-?\d+(\.\d+)?"; // Регулярное выражение для поиска координат X и Y
+            string[] lines = input.Split(new[] { "\r\n" }, StringSplitOptions.RemoveEmptyEntries);
 
-            string pattern = @"[XY](\d+(\.\d+)?)"; // Регулярное выражение для поиска координат X и Y
-            MatchCollection matches = Regex.Matches(input, pattern);
-
-            if (matches.Count % 2 == 0)
+            foreach (string line in lines)
             {
-                for (int i = 0; i < matches.Count; i += 2)
+                MatchCollection matches = Regex.Matches(line, pattern);
+
+                double xValue = 0;
+                double yValue = 0;
+
+                foreach (Match match in matches)
                 {
-                    double x = double.Parse(matches[i].Groups[1].Value, CultureInfo.InvariantCulture);
-                    double y = double.Parse(matches[i + 1].Groups[1].Value, CultureInfo.InvariantCulture);
-                    coordinates.Add(new Coordinate(x, y));
+                    if (double.TryParse(match.Value.Substring(1), NumberStyles.Float, CultureInfo.InvariantCulture, out double coordinateValue))
+                    {
+                        if (match.Value.StartsWith("X"))
+                        {
+                            xValue = coordinateValue;
+                        }
+                        else if (match.Value.StartsWith("Y"))
+                        {
+                            yValue = coordinateValue;
+                        }
+                    }
                 }
+
+                coordinates.Add(new Coordinate(xValue, yValue));
             }
 
             return coordinates;
@@ -266,45 +282,108 @@ namespace WinFormsAppTest
         private void pictureBox1_Paint(object sender, PaintEventArgs e)
         {
             Graphics g = e.Graphics;
-            Pen pen = new Pen(Color.Black, 2);
+            Pen pen = new Pen(Color.Red, 0.01f);
 
-            // Преобразование в координаты pictureBox1
-            float scaleFactor = 50.0f; // Масштабный коэффициент для увеличения размеров
-            float offsetX = 200.0f; // Смещение по X
-            float offsetY = 200.0f; // Смещение по Y
+            g.DrawLine(Pens.Black, 0, pictureBox1.Height / 2, pictureBox1.Width, pictureBox1.Height / 2);
+            g.DrawLine(Pens.Black, pictureBox1.Width / 2, 0, pictureBox1.Width / 2, pictureBox1.Height);
 
-            // Рисование координатной сетки
-            DrawCoordinateGrid(g, scaleFactor, offsetX, offsetY);
-
-            // Рисование линий между точками
-            for (int i = 0; i < lst.Count - 1; i++)
+            float gridSize = scale;
+            while (gridSize < pictureBox1.Width || gridSize < pictureBox1.Height)
             {
-                float x1 = (float)(lst[i].X * scaleFactor + offsetX);
-                float y1 = (float)(-lst[i].Y * scaleFactor + offsetY);
-                float x2 = (float)(lst[i + 1].X * scaleFactor + offsetX);
-                float y2 = (float)(-lst[i + 1].Y * scaleFactor + offsetY);
-
-                g.DrawLine(pen, x1, y1, x2, y2);
+                g.DrawLine(Pens.LightGray, pictureBox1.Width / 2 + gridSize, 0, pictureBox1.Width / 2 + gridSize, pictureBox1.Height);
+                g.DrawLine(Pens.LightGray, pictureBox1.Width / 2 - gridSize, 0, pictureBox1.Width / 2 - gridSize, pictureBox1.Height);
+                g.DrawLine(Pens.LightGray, 0, pictureBox1.Height / 2 + gridSize, pictureBox1.Width, pictureBox1.Height / 2 + gridSize);
+                g.DrawLine(Pens.LightGray, 0, pictureBox1.Height / 2 - gridSize, pictureBox1.Width, pictureBox1.Height / 2 - gridSize);
+                gridSize += scale;
             }
+
+            // Отрисовка точек
+            DrawPoints(g, lstBody, currentIndex, Brushes.Black);
         }
-        private void DrawCoordinateGrid(Graphics g, float scaleFactor, float offsetX, float offsetY)
+
+        private void Timer_Tick(object sender, EventArgs e)
         {
-            Pen gridPen = new Pen(Color.LightGray, 1);
-
-            // Рисование вертикальных линий координатной сетки
-            for (int x = -10; x <= 10; x++)
+            // Если отрисовка точек закончена, останавливаем таймер и начинаем отрисовку линий
+            if (currentIndex >= lstBody.Count)
             {
-                float xPos = x * 50.0f * scaleFactor + offsetX;
-                g.DrawLine(gridPen, xPos, -1000, xPos, 1000);
+                timer.Stop();
+                currentIndex = 0; // Сбрасываем индекс для начала отрисовки линий
+                timer.Interval = 5; // Задержка между отрисовкой линий (в миллисекундах)
+                timer.Tick -= Timer_Tick; // Удаляем обработчик события Timer_Tick
+                timer.Tick += Timer_DrawLines; // Добавляем обработчик события Timer_DrawLines
+                timer.Start();
+                return;
             }
 
-            // Рисование горизонтальных линий координатной сетки
-            for (int y = -10; y <= 10; y++)
+            pictureBox1.Refresh(); // Обновляем PictureBox для отрисовки новых точек
+            currentIndex++; // Увеличиваем индекс для следующей отрисовки
+        }
+
+        private void Timer_DrawLines(object sender, EventArgs e)
+        {
+            // Если отрисовка линий закончена, останавливаем таймер
+            if (currentIndex >= lstContur.Count)
             {
-                float yPos = y * 50.0f * scaleFactor + offsetY;
-                g.DrawLine(gridPen, -1000, yPos, 1000, yPos);
+                timer.Stop();
+                return;
+            }
+
+            pictureBox1.Refresh(); // Обновляем PictureBox для отрисовки новых линий
+            DrawPoints(pictureBox1.CreateGraphics(), lstBody, lstBody.Count, Brushes.Black); // Отрисовываем все точки
+
+            // Отрисовка линий до текущего индекса
+            PointF prevPoint = PointF.Empty;
+            Graphics g = pictureBox1.CreateGraphics(); // Создаем объект Graphics для рисования
+            Pen pen = new Pen(Color.Red, 0.01f); // Создаем объект Pen для рисования линий
+
+            for (int i = 0; i < currentIndex; i++)
+            {
+                PointF currentPoint = MapCoordinateToPoint(lstContur[i]);
+                if (!prevPoint.IsEmpty)
+                {
+                    g.DrawLine(pen, prevPoint, currentPoint);
+                }
+                prevPoint = currentPoint;
+            }
+
+            g.Dispose(); // Освобождаем ресурсы объекта Graphics
+            pen.Dispose(); // Освобождаем ресурсы объекта Pen
+
+            currentIndex++; // Увеличиваем индекс для следующей отрисовки линий
+        }
+
+
+        private void DrawPoints(Graphics g, List<Coordinate> points, int endIndex, Brush brush)
+        {
+            for (int i = 0; i < Math.Min(endIndex, points.Count); i++)
+            {
+                PointF point = MapCoordinateToPoint(points[i]);
+                g.FillEllipse(brush, point.X - pointSize / 2, point.Y - pointSize / 2, pointSize, pointSize);
             }
         }
+        /*
+        private void DrawLines(Graphics g, List<Coordinate> points, int endIndex, Pen pen)
+        {
+            PointF prevPoint = PointF.Empty;
+            for (int i = 0; i < Math.Min(endIndex, points.Count); i++)
+            {
+                PointF currentPoint = MapCoordinateToPoint(points[i]);
+                if (!prevPoint.IsEmpty)
+                {
+                    g.DrawLine(pen, prevPoint, currentPoint);
+                }
+                prevPoint = currentPoint;
+            }
+        }
+        */
+
+        private PointF MapCoordinateToPoint(Coordinate coordinate)
+        {
+            float x = (float)(coordinate.X * scale + pictureBox1.Width / 2);
+            float y = (float)(-coordinate.Y * scale + pictureBox1.Height / 2);
+            return new PointF(x, y);
+        }
+
     }
     class Coordinate
     {
@@ -317,6 +396,7 @@ namespace WinFormsAppTest
             Y = y;
         }
     }
+    /*
     public class DrawingForm : Form
     {
         private Point[] pointsToDraw;
@@ -479,4 +559,5 @@ namespace WinFormsAppTest
             }
         }
     }
+    */
 }
